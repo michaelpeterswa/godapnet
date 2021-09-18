@@ -32,6 +32,22 @@ func TestCreateMessage(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:       "testing CreateMessage empty prefix",
+			prefix:     "",
+			text:       "this is a test message",
+			callNames:  []string{"testcall"},
+			txGrpNames: []string{"us-wa"},
+			emergency:  false,
+			output: []Message{
+				{
+					Text:                  "this is a test message",
+					CallsignNames:         []string{"testcall"},
+					TransmitterGroupNames: []string{"us-wa"},
+					Emergency:             false,
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

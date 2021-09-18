@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -11,13 +12,25 @@ import (
 
 func CreateMessage(prefix string, text string, callsignNames []string, transmitterGroupNames []string, emergency bool) []Message {
 	var messages []Message
+	var length int
 	// Calculate length of message, including "xxxxx: " for prefix at start of message
-	length := MaxMessageLength - len(prefix) - 2
+	if prefix == "" {
+		length = MaxMessageLength
+	} else {
+		length = MaxMessageLength - len(prefix) - 2
+	}
+
 	texts := sliceStringByN(text, length)
 
 	for _, msg := range texts {
+		var text string
+		if length == MaxMessageLength {
+			text = msg
+		} else {
+			text = fmt.Sprintf("%s: %s", prefix, msg)
+		}
 		currentMessage := Message{
-			Text:                  fmt.Sprintf("%s: %s", prefix, msg),
+			Text:                  text,
 			CallsignNames:         callsignNames,
 			TransmitterGroupNames: transmitterGroupNames,
 			Emergency:             emergency,
@@ -60,9 +73,18 @@ func SendMessage(payloads []string, username string, password string) {
 		if err != nil {
 			log.Printf("Send Request Failed: %s\n", err.Error())
 		}
-		log.Printf("Response (%s): %s\n", resp.Status, resp.Body)
-
 		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusCreated {
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Response (%s): %s\n", resp.Status, string(bodyBytes))
+		} else {
+			log.Printf("Response (%s)\n", resp.Status)
+		}
+
 	}
 
 }
