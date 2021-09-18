@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func createMessage(text string, callsignNames []string, transmitterGroups []string, emergency bool) []Message {
+func CreateMessage(text string, callsignNames []string, transmitterGroups []string, emergency bool) []Message {
 	var messages []Message
 	texts := sliceStringByN(text, MaxMessageLength)
 
@@ -25,7 +25,7 @@ func createMessage(text string, callsignNames []string, transmitterGroups []stri
 	return messages
 }
 
-func generatePayload(messages []Message) []string {
+func GeneratePayload(messages []Message) []string {
 	var payloads []string
 	for _, message := range messages {
 		payload, err := json.Marshal(message)
@@ -38,7 +38,7 @@ func generatePayload(messages []Message) []string {
 	return payloads
 }
 
-func sendMessage(payloads []string, username string, password string) {
+func SendMessage(payloads []string, username string, password string) {
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
