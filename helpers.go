@@ -22,7 +22,7 @@ func sliceStringByN(text string, max int) []string {
 
 		if i < splits {
 			texts = append(texts, text[lower:upper])
-		} else {
+		} else if text[lower:textLength] != "" {
 			texts = append(texts, text[lower:textLength])
 		}
 	}
