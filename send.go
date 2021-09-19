@@ -56,7 +56,7 @@ func GeneratePayload(messages []Message) []string {
 
 func SendMessage(payloads []string, username string, password string) {
 	client := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 30,
 	}
 
 	for _, message := range payloads {
