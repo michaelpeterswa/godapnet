@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func CreateMessage(prefix string, text string, callsignNames []string, transmitterGroupNames []string, emergency bool) []Message {
@@ -46,7 +47,7 @@ func GeneratePayload(messages []Message) []string {
 	for _, message := range messages {
 		payload, err := json.Marshal(message)
 		if err != nil {
-			log.Printf("generatePayload() Failed: %s\n", err.Error())
+			logger.Error("Payload failed to marshal", zap.String("error", err.Error()))
 		}
 		payloads = append(payloads, string(payload))
 	}
@@ -62,27 +63,30 @@ func SendMessage(payloads []string, username string, password string) {
 	for _, message := range payloads {
 		req, err := http.NewRequest("POST", BaseURL+CallsEndpoint, bytes.NewBuffer([]byte(message)))
 		if err != nil {
-			log.Printf("New Request Failed: %s\n", err.Error())
+			logger.Error("http.NewRequest failed", zap.String("error", err.Error()))
 		}
 
 		req.Header.Add("Authorization", createAuthToken(username, password))
 		req.Header.Set("Content-Type", "application/json")
 
-		log.Printf("Request: %s - %s :: %s - %s\n", req.Method, req.Host, req.Header, req.Body)
+		logger.Debug("Sending a Request",
+			zap.String("method", req.Method),
+			zap.String("host", req.Host),
+		)
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Printf("Send Request Failed: %s\n", err.Error())
+			logger.Error("Sending Request Failed", zap.String("error", err.Error()))
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusCreated {
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			_, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Fatal(err)
+				logger.Error("Reading Response Body Failed", zap.String("error", err.Error()))
 			}
-			log.Printf("Response (%s): %s\n", resp.Status, string(bodyBytes))
+			logger.Info("Response: Successful", zap.String("status", resp.Status))
 		} else {
-			log.Printf("Response (%s)\n", resp.Status)
+			logger.Info("Response: Failed", zap.String("status", resp.Status))
 		}
 
 	}
