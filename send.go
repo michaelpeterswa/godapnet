@@ -69,7 +69,7 @@ func SendMessage(payloads []string, username string, password string) {
 		req.Header.Add("Authorization", createAuthToken(username, password))
 		req.Header.Set("Content-Type", "application/json")
 
-		logger.Debug("Sending a Request",
+		logger.Info("Sending a Request",
 			zap.String("method", req.Method),
 			zap.String("host", req.Host),
 		)
