@@ -6,8 +6,7 @@ import (
 
 var logger *zap.Logger
 
-func init() {
-	logger, _ = zap.NewProduction()
-	defer logger.Sync()
+func InitializeLogger(externalLogger *zap.Logger) {
+	logger = externalLogger
 	logger.Info("godapnet is initializing...")
 }
