@@ -1,4 +1,4 @@
-module github.com/michaelpeterswa/godapnet
+module nw.codes/godapnet
 
 go 1.16
 
