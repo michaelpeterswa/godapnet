@@ -48,6 +48,7 @@ func GeneratePayload(messages []Message) []string {
 		payload, err := json.Marshal(message)
 		if err != nil {
 			logger.Error("Payload failed to marshal", zap.String("error", err.Error()))
+			continue
 		}
 		payloads = append(payloads, string(payload))
 	}
@@ -64,6 +65,7 @@ func SendMessage(payloads []string, username string, password string) {
 		req, err := http.NewRequest("POST", BaseURL+CallsEndpoint, bytes.NewBuffer([]byte(message)))
 		if err != nil {
 			logger.Error("http.NewRequest failed", zap.String("error", err.Error()))
+			return
 		}
 
 		req.Header.Add("Authorization", createAuthToken(username, password))
@@ -76,6 +78,7 @@ func SendMessage(payloads []string, username string, password string) {
 		resp, err := client.Do(req)
 		if err != nil {
 			logger.Error("Sending Request Failed", zap.String("error", err.Error()))
+			return
 		}
 		defer resp.Body.Close()
 
@@ -83,6 +86,7 @@ func SendMessage(payloads []string, username string, password string) {
 			_, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				logger.Error("Reading Response Body Failed", zap.String("error", err.Error()))
+				return
 			}
 			logger.Info("Response: Successful", zap.String("status", resp.Status))
 		} else {
