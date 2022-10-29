@@ -1,6 +1,7 @@
 package godapnet
 
-const MaxMessageLength = 80
-
-const BaseURL = "https://hampager.de/api"
-const CallsEndpoint = "/calls"
+const (
+	MaxMessageLength = 80
+	BaseURL          = "https://hampager.de/api"
+	CallsEndpoint    = "/calls"
+)

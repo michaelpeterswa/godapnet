@@ -79,7 +79,11 @@ func TestGeneratePayloads(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.output, GeneratePayload(tc.messages))
+			res, err := GeneratePayload(tc.messages)
+			if err != nil {
+				t.FailNow()
+			}
+			assert.Equal(t, tc.output, res)
 		})
 	}
 }

@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 func CreateMessage(prefix string, text string, callsignNames []string, transmitterGroupNames []string, emergency bool) []Message {
@@ -42,21 +40,20 @@ func CreateMessage(prefix string, text string, callsignNames []string, transmitt
 	return messages
 }
 
-func GeneratePayload(messages []Message) []string {
+func GeneratePayload(messages []Message) ([]string, error) {
 	var payloads []string
 	for _, message := range messages {
 		payload, err := json.Marshal(message)
 		if err != nil {
-			logger.Error("Payload failed to marshal", zap.String("error", err.Error()))
-			continue
+			return nil, err
 		}
 		payloads = append(payloads, string(payload))
 	}
 
-	return payloads
+	return payloads, nil
 }
 
-func SendMessage(payloads []string, username string, password string) {
+func SendMessage(payloads []string, username string, password string) error {
 	client := &http.Client{
 		Timeout: time.Second * 30,
 	}
@@ -64,35 +61,26 @@ func SendMessage(payloads []string, username string, password string) {
 	for _, message := range payloads {
 		req, err := http.NewRequest("POST", BaseURL+CallsEndpoint, bytes.NewBuffer([]byte(message)))
 		if err != nil {
-			logger.Error("http.NewRequest failed", zap.String("error", err.Error()))
-			return
+			return fmt.Errorf("error creating request: %w", err)
 		}
 
 		req.Header.Add("Authorization", createAuthToken(username, password))
 		req.Header.Set("Content-Type", "application/json")
 
-		logger.Info("Sending a Request",
-			zap.String("method", req.Method),
-			zap.String("host", req.Host),
-		)
 		resp, err := client.Do(req)
 		if err != nil {
-			logger.Error("Sending Request Failed", zap.String("error", err.Error()))
-			return
+			return fmt.Errorf("error sending request: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusCreated {
-			_, err := ioutil.ReadAll(resp.Body)
+			_, err := io.ReadAll(resp.Body)
 			if err != nil {
-				logger.Error("Reading Response Body Failed", zap.String("error", err.Error()))
-				return
+				return fmt.Errorf("error reading response body: %w", err)
 			}
-			logger.Info("Response: Successful", zap.String("status", resp.Status))
 		} else {
-			logger.Info("Response: Failed", zap.String("status", resp.Status))
+			return fmt.Errorf("error sending message: %s", resp.Status)
 		}
-
 	}
-
+	return nil
 }
