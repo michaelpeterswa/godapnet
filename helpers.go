@@ -1,15 +1,5 @@
 package godapnet
 
-import (
-	b64 "encoding/base64"
-	"fmt"
-)
-
-func createAuthToken(username string, password string) string {
-	preEncodedString := fmt.Sprintf("%s:%s", username, password)
-	return b64.StdEncoding.EncodeToString([]byte(preEncodedString))
-}
-
 func sliceStringByN(text string, max int) []string {
 	var texts []string
 	textLength := len(text)
