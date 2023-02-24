@@ -1,7 +1,6 @@
 package godapnet
 
 const (
-	MaxMessageLength = 80
-	BaseURL          = "https://hampager.de/api"
-	CallsEndpoint    = "/calls"
+	Alphapoc602RMaxMessageLength = 80
+	DAPNetURL                    = "https://hampager.de/api/calls"
 )
