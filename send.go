@@ -12,12 +12,13 @@ import (
 type Sender struct {
 	client *http.Client
 
+	URL      string
 	Callsign string
 	Username string
 	Password string
 }
 
-func NewSender(client *http.Client, callsign string, username string, password string) *Sender {
+func NewSender(client *http.Client, url string, callsign string, username string, password string) *Sender {
 	if client == nil {
 		client = &http.Client{
 			Timeout: time.Second * 30,
@@ -26,6 +27,7 @@ func NewSender(client *http.Client, callsign string, username string, password s
 
 	return &Sender{
 		client:   client,
+		URL:      url,
 		Callsign: callsign,
 		Username: username,
 		Password: password,
@@ -122,7 +124,7 @@ func (s *Sender) sendMessage(message Message) error {
 		return fmt.Errorf("error marshalling message: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, DAPNetURL, bytes.NewBuffer(out))
+	req, err := http.NewRequest(http.MethodPost, s.URL, bytes.NewBuffer(out))
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
