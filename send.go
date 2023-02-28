@@ -42,8 +42,9 @@ type MessageConfig struct {
 	Emergency         bool
 }
 
-func NewMessageConfig(maxMessageLength int, callsigns []string, transmitterGroups []string, emergency bool) *MessageConfig {
+func NewMessageConfig(prefix string, maxMessageLength int, callsigns []string, transmitterGroups []string, emergency bool) *MessageConfig {
 	return &MessageConfig{
+		Prefix:            prefix,
 		MaxMessageLength:  maxMessageLength,
 		Callsigns:         callsigns,
 		TransmitterGroups: transmitterGroups,

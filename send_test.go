@@ -80,7 +80,7 @@ func TestSend(t *testing.T) {
 
 			sender := godapnet.NewSender(http.DefaultClient, server.URL, tc.serverCallsign, tc.serverUsername, tc.serverPassword)
 
-			messageConfig := godapnet.NewMessageConfig(godapnet.Alphapoc602RMaxMessageLength, tc.mcCallsigns, tc.mcTxGroups, tc.mcEmergency)
+			messageConfig := godapnet.NewMessageConfig(tc.serverCallsign, godapnet.Alphapoc602RMaxMessageLength, tc.mcCallsigns, tc.mcTxGroups, tc.mcEmergency)
 
 			err := sender.Send(tc.message, messageConfig)
 			if err != nil {
