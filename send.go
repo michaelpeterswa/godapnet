@@ -73,8 +73,8 @@ func (s *Sender) Send(text string, messageConfig *MessageConfig) error {
 	texts := splitText(text, messageConfig.Prefix, messageConfig.MaxMessageLength)
 
 	reversedTexts := make([]string, len(texts))
-	for _, n := range texts {
-		reversedTexts = append([]string{n}, reversedTexts...)
+	for i, n := range texts {
+		reversedTexts[len(texts)-1-i] = n
 	}
 
 	for _, message := range reversedTexts {
