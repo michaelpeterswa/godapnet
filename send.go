@@ -1,151 +1,116 @@
+// Package godapnet sends messages to amateur radio POCSAG pagers over the
+// DAPNET network (https://hampager.de).
 package godapnet
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
+// maxErrorBodySize caps how much of an error response is kept in a StatusError.
+const maxErrorBodySize = 512
+
+// Sender sends calls to DAPNET with one account's credentials.
 type Sender struct {
-	client *http.Client
-
-	URL      string
-	Callsign string
-	Username string
-	Password string
+	client   *http.Client
+	url      string
+	username string
+	password string
 }
 
-func NewSender(client *http.Client, url string, callsign string, username string, password string) *Sender {
-	if client == nil {
-		client = &http.Client{
-			Timeout: time.Second * 30,
-		}
+// SenderOption configures a Sender.
+type SenderOption func(*Sender)
+
+// NewSender returns a Sender that authenticates as username. By default it
+// posts to DAPNetURL with an http.Client that times out after 30 seconds.
+func NewSender(username string, password string, opts ...SenderOption) *Sender {
+	s := &Sender{
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		url:      DAPNetURL,
+		username: username,
+		password: password,
 	}
 
-	return &Sender{
-		client:   client,
-		URL:      url,
-		Callsign: callsign,
-		Username: username,
-		Password: password,
+	for _, opt := range opts {
+		opt(s)
 	}
+
+	return s
 }
 
-type MessageConfig struct {
-	MaxMessageLength  int
-	Prefix            string
-	Callsigns         []string
-	TransmitterGroups []string
-	Emergency         bool
-}
-
-func NewMessageConfig(prefix string, maxMessageLength int, callsigns []string, transmitterGroups []string, emergency bool) *MessageConfig {
-	return &MessageConfig{
-		Prefix:            prefix,
-		MaxMessageLength:  maxMessageLength,
-		Callsigns:         callsigns,
-		TransmitterGroups: transmitterGroups,
-		Emergency:         emergency,
+// WithHTTPClient sends requests with client instead of the default.
+func WithHTTPClient(client *http.Client) SenderOption {
+	return func(s *Sender) {
+		s.client = client
 	}
 }
 
-type Message struct {
-	Text                  string   `json:"text"`
-	CallsignNames         []string `json:"callSignNames"`
-	TransmitterGroupNames []string `json:"transmitterGroupNames"`
-	Emergency             bool     `json:"emergency"`
-}
-
-func (mc *MessageConfig) createMessage(text string) Message {
-	return Message{
-		Text:                  text,
-		CallsignNames:         mc.Callsigns,
-		TransmitterGroupNames: mc.TransmitterGroups,
-		Emergency:             mc.Emergency,
+// WithURL posts calls to url instead of DAPNetURL.
+func WithURL(url string) SenderOption {
+	return func(s *Sender) {
+		s.url = url
 	}
 }
 
-// Send sends a message to the DAPNET network
-func (s *Sender) Send(text string, messageConfig *MessageConfig) error {
-	texts := splitText(text, messageConfig.Prefix, messageConfig.MaxMessageLength)
-
-	reversedTexts := make([]string, len(texts))
-	for i, n := range texts {
-		reversedTexts[len(texts)-1-i] = n
+// Send sends text as one or more pages, as described by messageConfig. Pages
+// are sent one at a time, so on error the returned message says how many were
+// already delivered.
+func (s *Sender) Send(ctx context.Context, text string, messageConfig *MessageConfig) error {
+	messages, err := messageConfig.messages(text)
+	if err != nil {
+		return err
 	}
 
-	for _, message := range reversedTexts {
-		messageToSend := messageConfig.createMessage(message)
-		err := s.sendMessage(messageToSend)
-		if err != nil {
-			return err
+	for i, message := range messages {
+		if err := s.sendMessage(ctx, message); err != nil {
+			return fmt.Errorf("sent %d of %d pages: %w", i, len(messages), err)
 		}
 	}
 
 	return nil
 }
 
-// splitText splits a text into multiple texts, each with a maximum length
-func splitText(inputText string, prefix string, maxLength int) []string {
-	var length int
-	// Calculate length of message, including "xxxxx: " for prefix at start of message
-	if prefix == "" {
-		length = maxLength
-	} else {
-		length = maxLength - len(prefix) - 2
-	}
-
-	texts := sliceStringByN(inputText, length)
-	prefixedTexts := prefixTexts(texts, prefix)
-
-	return prefixedTexts
-}
-
-// prefixTests adds a prefix to each text
-func prefixTexts(texts []string, prefix string) []string {
-	if prefix == "" {
-		return texts
-	}
-
-	var prefixedTexts []string
-	for _, text := range texts {
-		prefixedTexts = append(prefixedTexts, fmt.Sprintf("%s: %s", prefix, text))
-	}
-
-	return prefixedTexts
-}
-
-func (s *Sender) sendMessage(message Message) error {
-	// create json writer
+func (s *Sender) sendMessage(ctx context.Context, message Message) error {
 	out, err := json.Marshal(message)
 	if err != nil {
 		return fmt.Errorf("error marshalling message: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, s.URL, bytes.NewBuffer(out))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.url, bytes.NewReader(out))
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
 
-	req.SetBasicAuth(s.Username, s.Password)
+	req.SetBasicAuth(s.username, s.password)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error sending request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusCreated {
-		_, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("error reading response body: %w", err)
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
+		return &StatusError{
+			StatusCode: resp.StatusCode,
+			Status:     resp.Status,
+			Body:       strings.TrimSpace(string(body)),
 		}
-	} else {
-		return fmt.Errorf("error sending message: %s", resp.Status)
 	}
+
+	// Drain the body so the connection can be reused.
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("error reading response body: %w", err)
+	}
+
 	return nil
 }

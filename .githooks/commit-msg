@@ -1,0 +1,5 @@
+#!/bin/sh
+# Conventional commits are what semantic-release reads to decide the next
+# version, so a malformed message does not just look untidy — it silently
+# produces no release.
+exec npx --no-install commitlint --edit "$1"

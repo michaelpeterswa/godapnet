@@ -1,0 +1,8 @@
+#!/bin/sh
+# Run the same checks CI runs, so a failing commit is caught before it is
+# pushed rather than after.
+set -e
+
+golangci-lint run
+yamllint .
+go test -race -shuffle=on ./...

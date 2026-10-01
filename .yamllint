@@ -1,0 +1,21 @@
+---
+extends: default
+
+# node_modules appears locally once commitlint is installed via `make tools`.
+ignore: |
+  node_modules/
+
+rules:
+  # GitHub workflows conventionally run past 80 columns and reformatting them
+  # to fit hurts more than it helps.
+  line-length:
+    max: 120
+    level: warning
+  # "on:" in a workflow is a key, not the boolean true.
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  # Every YAML file leads with "---"; be consistent about it.
+  document-start:
+    present: true
