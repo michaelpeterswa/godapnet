@@ -128,13 +128,16 @@ func (mc *MessageConfig) messages(text string) ([]Message, error) {
 }
 
 // splitText breaks text into pages of at most n characters, breaking between
-// words where it can. Runs of whitespace collapse to a single space, and a word
-// longer than a page is split across pages.
+// words where it can. Line breaks are kept and count as one character; other
+// runs of whitespace collapse to a single space. Line breaks at the start or
+// end of text, or where a page ends, are dropped. A word longer than a page is
+// split across pages.
 func splitText(text string, n int) []string {
 	var (
 		pages []string
 		page  strings.Builder
-		size  int // characters in page, which may differ from its byte length
+		size  int    // characters in page, which may differ from its byte length
+		sep   string // whitespace to write before the next word
 	)
 
 	flush := func() {
@@ -145,24 +148,35 @@ func splitText(text string, n int) []string {
 		}
 	}
 
-	for _, word := range strings.Fields(text) {
-		runes := []rune(word)
-
-		for len(runes) > n {
-			flush()
-			pages = append(pages, string(runes[:n]))
-			runes = runes[n:]
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	for i, line := range strings.Split(text, "\n") {
+		if i > 0 && (size > 0 || len(pages) > 0) {
+			sep += "\n"
 		}
 
-		if size > 0 && size+1+len(runes) > n {
-			flush()
+		for j, word := range strings.Fields(line) {
+			if j > 0 {
+				sep = " "
+			}
+			runes := []rune(word)
+
+			for len(runes) > n {
+				flush()
+				pages = append(pages, string(runes[:n]))
+				runes = runes[n:]
+			}
+
+			if size > 0 && size+len(sep)+len(runes) > n {
+				flush()
+			}
+			if size > 0 {
+				page.WriteString(sep)
+				size += len(sep)
+			}
+			page.WriteString(string(runes))
+			size += len(runes)
+			sep = ""
 		}
-		if size > 0 {
-			page.WriteByte(' ')
-			size++
-		}
-		page.WriteString(string(runes))
-		size += len(runes)
 	}
 	flush()
 

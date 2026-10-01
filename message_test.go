@@ -34,10 +34,52 @@ func TestSplitText(t *testing.T) {
 			pages: []string{"the quick", "brown fox", "jumps"},
 		},
 		{
-			name:  "collapses whitespace",
-			text:  "  one\t\ttwo\n three  ",
+			name:  "collapses spaces and tabs",
+			text:  "  one\t\ttwo   three  ",
 			n:     20,
 			pages: []string{"one two three"},
+		},
+		{
+			name:  "keeps line breaks",
+			text:  "one two\n three  \nfour",
+			n:     20,
+			pages: []string{"one two\nthree\nfour"},
+		},
+		{
+			name:  "keeps blank lines",
+			text:  "one\n\ntwo",
+			n:     20,
+			pages: []string{"one\n\ntwo"},
+		},
+		{
+			name:  "treats CRLF as a line break",
+			text:  "one\r\ntwo",
+			n:     20,
+			pages: []string{"one\ntwo"},
+		},
+		{
+			name:  "drops leading and trailing line breaks",
+			text:  "\n\n one\ntwo \n\n",
+			n:     20,
+			pages: []string{"one\ntwo"},
+		},
+		{
+			name:  "counts a line break as a character",
+			text:  "abcd\nefgh",
+			n:     9,
+			pages: []string{"abcd\nefgh"},
+		},
+		{
+			name:  "drops a line break where a page ends",
+			text:  "abcd\nefgh",
+			n:     8,
+			pages: []string{"abcd", "efgh"},
+		},
+		{
+			name:  "line break after a split word",
+			text:  "abcdefgh\nij",
+			n:     6,
+			pages: []string{"abcdef", "gh\nij"},
 		},
 		{
 			name:  "splits a word longer than a page",
@@ -65,7 +107,7 @@ func TestSplitText(t *testing.T) {
 		},
 		{
 			name:  "only whitespace",
-			text:  " \t\n ",
+			text:  " \t\n\r\n ",
 			n:     10,
 			pages: nil,
 		},
