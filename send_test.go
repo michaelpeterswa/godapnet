@@ -88,22 +88,22 @@ func TestSend(t *testing.T) {
 			texts: []string{"x1xxx: test message test message test message"},
 		},
 		{
-			name: "splits long text in order",
+			name: "splits long text, last page first",
 			opts: []godapnet.MessageOption{godapnet.WithPrefix("x1xxx")},
 			text: "this is a test message that is longer than 80 characters and it's important that it gets split up into multiple messages",
 			texts: []string{
-				"x1xxx: this is a test message that is longer than 80 characters and it's",
 				"x1xxx: important that it gets split up into multiple messages",
+				"x1xxx: this is a test message that is longer than 80 characters and it's",
 			},
 		},
 		{
-			name: "splits long text in reverse",
-			opts: []godapnet.MessageOption{godapnet.WithMaxMessageLength(10), godapnet.WithReverseOrder()},
+			name: "splits long text in order",
+			opts: []godapnet.MessageOption{godapnet.WithMaxMessageLength(10), godapnet.WithInOrder()},
 			text: "first page second page",
 			texts: []string{
-				"page",
-				"second",
 				"first page",
+				"second",
+				"page",
 			},
 		},
 	}
@@ -142,8 +142,9 @@ func TestSendStatusError(t *testing.T) {
 	assert.Equal(t, `{"message":"bad credentials"}`, statusErr.Body)
 	assert.Contains(t, err.Error(), "sent 0 of 2 pages")
 
-	// The first failure stops the rest of the pages being sent.
-	assert.Equal(t, []string{"one"}, fake.texts())
+	// The first failure stops the rest of the pages being sent. Pages go last
+	// page first, so only "two" reached the server.
+	assert.Equal(t, []string{"two"}, fake.texts())
 }
 
 func TestSendInvalidConfig(t *testing.T) {

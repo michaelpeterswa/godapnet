@@ -39,8 +39,10 @@ func main() {
 Text longer than a page is split between words into several pages, each
 carrying the prefix. Pages are 80 characters
 (`godapnet.Alphapoc602RMaxMessageLength`) unless set with
-`WithMaxMessageLength`, and are sent first page first unless
-`WithReverseOrder` is given. `WithEmergency` marks the call as an emergency.
+`WithMaxMessageLength`. They are sent last page first, so they read top to
+bottom on pagers like the Alphapoc 602R that list the newest message at the
+top; pass `WithInOrder` for pagers that list it at the bottom. `WithEmergency`
+marks the call as an emergency.
 
 `Send` checks the config before sending anything and returns `ErrNoCallsigns`,
 `ErrInvalidMaxLength`, `ErrPrefixTooLong` or `ErrEmptyText` for a message it

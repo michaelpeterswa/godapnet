@@ -85,7 +85,7 @@ func TestSplitText(t *testing.T) {
 
 func TestMessages(t *testing.T) {
 	t.Run("prefixes every page within the max length", func(t *testing.T) {
-		mc := NewMessageConfig([]string{"x1xxx"}, WithPrefix("x1xxx"), WithMaxMessageLength(16))
+		mc := NewMessageConfig([]string{"x1xxx"}, WithPrefix("x1xxx"), WithMaxMessageLength(16), WithInOrder())
 
 		messages, err := mc.messages("one two three four")
 		require.NoError(t, err)
@@ -98,8 +98,8 @@ func TestMessages(t *testing.T) {
 		assert.Equal(t, []string{"x1xxx: one two", "x1xxx: three", "x1xxx: four"}, texts)
 	})
 
-	t.Run("reverse order", func(t *testing.T) {
-		mc := NewMessageConfig([]string{"x1xxx"}, WithMaxMessageLength(5), WithReverseOrder())
+	t.Run("sends the last page first by default", func(t *testing.T) {
+		mc := NewMessageConfig([]string{"x1xxx"}, WithMaxMessageLength(5))
 
 		messages, err := mc.messages("one two three")
 		require.NoError(t, err)
@@ -109,6 +109,19 @@ func TestMessages(t *testing.T) {
 			texts = append(texts, m.Text)
 		}
 		assert.Equal(t, []string{"three", "two", "one"}, texts)
+	})
+
+	t.Run("in order", func(t *testing.T) {
+		mc := NewMessageConfig([]string{"x1xxx"}, WithMaxMessageLength(5), WithInOrder())
+
+		messages, err := mc.messages("one two three")
+		require.NoError(t, err)
+
+		var texts []string
+		for _, m := range messages {
+			texts = append(texts, m.Text)
+		}
+		assert.Equal(t, []string{"one", "two", "three"}, texts)
 	})
 
 	t.Run("copies recipients and emergency flag", func(t *testing.T) {
