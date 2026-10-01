@@ -1,29 +1,38 @@
 ---
-name: Release Version
+name: push_main
 
-on:  # yamllint disable-line rule:truthy
+on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   release:
-    name: 'Release to GitHub'
     runs-on: ubuntu-latest
     steps:
-
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
         with:
-          node-version: lts/*
+          fetch-depth: 0
+          # semantic-release pushes a tag. Using GH_RELEASE_PAT rather than the
+          # default GITHUB_TOKEN keeps that consistent with the other repos and
+          # lets tag-triggered workflows fire if any are added later.
+          token: ${{ secrets.GH_RELEASE_PAT }}
 
-      - name: Install Semantic Release Plugins
-        run: npm install --save-dev @semantic-release/changelog @semantic-release/git conventional-changelog-conventionalcommits  # yamllint disable-line rule:line-length
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
 
-      - name: Release Version
+      - name: Install semantic-release
+        run: |
+          npm install --no-save \
+            semantic-release \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator \
+            @semantic-release/github
+
+      - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_RELEASE_PAT }}
         run: npx semantic-release

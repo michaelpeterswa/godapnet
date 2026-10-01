@@ -1,49 +1,60 @@
 ---
-on: [pull_request]  # yamllint disable-line rule:truthy
-name: main
+name: pull_request
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v7
         with:
-          node-version: lts/*
-      - run: npm install --save-dev @commitlint/{config-conventional,cli}
-      - run: npx commitlint --from=${{ github.event.pull_request.base.sha }}
-  golangci-lint:
-    strategy:
-      matrix:
-        go-version: [1.18.x]
-        os: [ubuntu-latest]
-    name: lint
-    runs-on: ${{ matrix.os }}
+          node-version: "22"
+      - name: Install commitlint
+        run: npm install --no-save @commitlint/cli @commitlint/config-conventional
+      - name: Lint commits on this branch
+        run: npx commitlint --from "origin/${{ github.base_ref }}" --to HEAD --verbose
+
+  go:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          version: v1.46
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -shuffle=on ./...
+
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: yaml-lint
-        uses: ibiqlik/action-yamllint@v3
-  test:
-    strategy:
-      matrix:
-        go-version: [1.18.x]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Test
-        run: go test ./...
+      - uses: actions/checkout@v7
+      - name: yamllint
+        run: yamllint .
