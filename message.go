@@ -14,7 +14,7 @@ type MessageConfig struct {
 	prefix            string
 	maxMessageLength  int
 	emergency         bool
-	reverseOrder      bool
+	inOrder           bool
 }
 
 // MessageOption configures a MessageConfig.
@@ -64,11 +64,13 @@ func WithEmergency() MessageOption {
 	}
 }
 
-// WithReverseOrder sends the pages of a long message last page first, for
-// pagers that list the most recent message at the top.
-func WithReverseOrder() MessageOption {
+// WithInOrder sends the pages of a long message first page first, for pagers
+// that list the most recent message at the bottom. By default pages are sent
+// last page first, so they read top to bottom on pagers such as the Alphapoc
+// 602R that list the most recent message at the top.
+func WithInOrder() MessageOption {
 	return func(mc *MessageConfig) {
-		mc.reverseOrder = true
+		mc.inOrder = true
 	}
 }
 
@@ -105,7 +107,7 @@ func (mc *MessageConfig) messages(text string) ([]Message, error) {
 	if len(pages) == 0 {
 		return nil, ErrEmptyText
 	}
-	if mc.reverseOrder {
+	if !mc.inOrder {
 		slices.Reverse(pages)
 	}
 
