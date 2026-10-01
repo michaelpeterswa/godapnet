@@ -37,7 +37,9 @@ func main() {
 ```
 
 Text longer than a page is split between words into several pages, each
-carrying the prefix. Pages are 80 characters
+carrying the prefix. Runs of whitespace, including line breaks, collapse to a
+single space: DAPNET accepts line breaks, but an Alphapoc 602R shows only the
+text before the first one. Pages are 80 characters
 (`godapnet.Alphapoc602RMaxMessageLength`) unless set with
 `WithMaxMessageLength`. They are sent last page first, so they read top to
 bottom on pagers like the Alphapoc 602R that list the newest message at the

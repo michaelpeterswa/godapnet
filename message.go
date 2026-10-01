@@ -130,6 +130,9 @@ func (mc *MessageConfig) messages(text string) ([]Message, error) {
 // splitText breaks text into pages of at most n characters, breaking between
 // words where it can. Runs of whitespace collapse to a single space, and a word
 // longer than a page is split across pages.
+//
+// Line breaks collapse too, on purpose: DAPNET accepts them, but an Alphapoc
+// 602R shows only the text before the first one and drops the rest.
 func splitText(text string, n int) []string {
 	var (
 		pages []string
